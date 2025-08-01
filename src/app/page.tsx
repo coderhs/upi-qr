@@ -165,6 +165,40 @@ export default function Home() {
     }
   };
 
+  const shareQRCode = async () => {
+    if (qrCodeDataUrl && navigator.share) {
+      try {
+        // Convert data URL to blob for sharing
+        const response = await fetch(qrCodeDataUrl);
+        const blob = await response.blob();
+        const file = new File([blob], 'upi-qr-code.png', { type: 'image/png' });
+
+        await navigator.share({
+          title: 'UPI QR Code',
+          text: 'Generated UPI QR Code for payment',
+          files: [file],
+          url: generatedUri
+        });
+      } catch (error) {
+        console.error('Error sharing:', error);
+        // Fallback: copy URI to clipboard
+        if (navigator.clipboard) {
+          await navigator.clipboard.writeText(generatedUri);
+          alert('UPI URI copied to clipboard!');
+        }
+      }
+    } else {
+      // Fallback for browsers that don't support Web Share API
+      if (navigator.clipboard) {
+        await navigator.clipboard.writeText(generatedUri);
+        alert('UPI URI copied to clipboard!');
+      } else {
+        // Final fallback: show URI in alert
+        alert(`UPI URI: ${generatedUri}`);
+      }
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8 px-4">
       <div className="max-w-4xl mx-auto">
@@ -402,12 +436,24 @@ export default function Home() {
                   </div>
                 </div>
 
-                <button
-                  onClick={downloadQRCode}
-                  className="bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors"
-                >
-                  Download QR Code
-                </button>
+                <div className="space-y-3">
+                  <button
+                    onClick={downloadQRCode}
+                    className="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors"
+                  >
+                    Download QR Code
+                  </button>
+
+                  <button
+                    onClick={shareQRCode}
+                    className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
+                    </svg>
+                    Share QR Code
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="text-center text-gray-500 py-12">
