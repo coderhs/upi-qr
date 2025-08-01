@@ -6,6 +6,7 @@
     "name": "Harisankar P S",
     "url": "https://hsps.in"
   },
+  "license": "MIT",
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
