@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import QRCode from 'qrcode';
 
 interface UPIFormData {
@@ -38,6 +38,8 @@ export default function Home() {
   const [generatedUri, setGeneratedUri] = useState<string>('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string>('');
+  const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
+  const [showShareMenu, setShowShareMenu] = useState(false);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -166,38 +168,74 @@ export default function Home() {
   };
 
   const shareQRCode = async () => {
-    if (qrCodeDataUrl && navigator.share) {
-      try {
-        // Convert data URL to blob for sharing
+    setShowShareMenu(true);
+  };
+
+  const shareViaNative = async () => {
+    setShowShareMenu(false);
+    try {
+      // Check if Web Share API is available and supports files
+      if (navigator.share && navigator.canShare) {
+        // Try to share with file first (QR code image)
         const response = await fetch(qrCodeDataUrl);
         const blob = await response.blob();
         const file = new File([blob], 'upi-qr-code.png', { type: 'image/png' });
 
-        await navigator.share({
+        const shareData = {
           title: 'UPI QR Code',
           text: 'Generated UPI QR Code for payment',
-          files: [file],
-          url: generatedUri
-        });
-      } catch (error) {
-        console.error('Error sharing:', error);
-        // Fallback: copy URI to clipboard
-        if (navigator.clipboard) {
-          await navigator.clipboard.writeText(generatedUri);
-          alert('UPI URI copied to clipboard!');
+          files: [file]
+        };
+
+        // Check if the browser can share files
+        if (navigator.canShare(shareData)) {
+          await navigator.share(shareData);
+          return;
         }
       }
-    } else {
-      // Fallback for browsers that don't support Web Share API
-      if (navigator.clipboard) {
-        await navigator.clipboard.writeText(generatedUri);
-        alert('UPI URI copied to clipboard!');
-      } else {
-        // Final fallback: show URI in alert
-        alert(`UPI URI: ${generatedUri}`);
-      }
+
+      // If file sharing is not supported, fallback to download
+      alert('Native sharing not supported. Please use "Download QR Image" to save the QR code.');
+    } catch (error) {
+      console.error('Error sharing:', error);
+      alert('Failed to share QR code. Please use "Download QR Image" to save the QR code.');
     }
   };
+
+  const shareQRImage = async () => {
+    setShowShareMenu(false);
+    try {
+      // Create a temporary link to download the QR image
+      const link = document.createElement('a');
+      link.href = qrCodeDataUrl;
+      link.download = 'upi-qr-code.png';
+      link.click();
+
+      // Show a message to guide the user
+      alert('QR code image downloaded! You can now share the downloaded image file.');
+    } catch (error) {
+      console.error('Error sharing QR image:', error);
+      alert('Failed to download QR code image. Please try again.');
+    }
+  };
+
+
+
+  // Close share menu when clicking outside
+  const handleClickOutside = (event: MouseEvent) => {
+    const target = event.target as Element;
+    if (!target.closest('.share-menu-container')) {
+      setShowShareMenu(false);
+    }
+  };
+
+  // Add click outside listener
+  useEffect(() => {
+    if (showShareMenu) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [showShareMenu]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8 px-4">
@@ -213,7 +251,7 @@ export default function Home() {
             <h2 className="text-2xl font-semibold text-gray-800 mb-6">UPI Parameters</h2>
 
             <div className="space-y-4">
-              {/* Required Fields */}
+              {/* Essential Fields */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Payee VPA (UPI ID) <span className="text-red-500">*</span>
@@ -226,20 +264,6 @@ export default function Home() {
                   placeholder="example@upi"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Payee Name
-                </label>
-                <input
-                  type="text"
-                  name="payeeName"
-                  value={formData.payeeName}
-                  onChange={handleInputChange}
-                  placeholder="Recipient Name"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
@@ -260,142 +284,179 @@ export default function Home() {
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Currency
-                </label>
-                <select
-                  name="currency"
-                  value={formData.currency}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              {/* Advanced Options Accordion */}
+              <div className="border border-gray-200 rounded-md">
+                <button
+                  type="button"
+                  onClick={() => setShowAdvancedOptions(!showAdvancedOptions)}
+                  className="w-full px-4 py-3 text-left bg-gray-50 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-md transition-colors flex items-center justify-between"
                 >
-                  <option value="INR">INR (Indian Rupee)</option>
-                  <option value="USD">USD (US Dollar)</option>
-                  <option value="EUR">EUR (Euro)</option>
-                </select>
-              </div>
+                  <span className="font-medium text-gray-700">Advanced Options</span>
+                  <svg
+                    className={`w-5 h-5 text-gray-500 transition-transform ${showAdvancedOptions ? 'rotate-180' : ''}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Transaction Note
-                </label>
-                <input
-                  type="text"
-                  name="transactionNote"
-                  value={formData.transactionNote}
-                  onChange={handleInputChange}
-                  placeholder="Payment for services"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
+                {showAdvancedOptions && (
+                  <div className="p-4 space-y-4 border-t border-gray-200">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Payee Name
+                      </label>
+                      <input
+                        type="text"
+                        name="payeeName"
+                        value={formData.payeeName}
+                        onChange={handleInputChange}
+                        placeholder="Recipient Name"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Merchant Code
-                </label>
-                <input
-                  type="text"
-                  name="merchantCode"
-                  value={formData.merchantCode}
-                  onChange={handleInputChange}
-                  placeholder="Merchant identifier"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Currency
+                      </label>
+                      <select
+                        name="currency"
+                        value={formData.currency}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="INR">INR (Indian Rupee)</option>
+                        <option value="USD">USD (US Dollar)</option>
+                        <option value="EUR">EUR (Euro)</option>
+                      </select>
+                    </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Minimum Amount
-                  </label>
-                  <input
-                    type="number"
-                    name="minimumAmount"
-                    value={formData.minimumAmount}
-                    onChange={handleInputChange}
-                    onBlur={handleAmountBlur}
-                    placeholder="0.00"
-                    step="0.01"
-                    min="0"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Transaction Note
+                      </label>
+                      <input
+                        type="text"
+                        name="transactionNote"
+                        value={formData.transactionNote}
+                        onChange={handleInputChange}
+                        placeholder="Payment for services"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Maximum Amount
-                  </label>
-                  <input
-                    type="number"
-                    name="maximumAmount"
-                    value={formData.maximumAmount}
-                    onChange={handleInputChange}
-                    onBlur={handleAmountBlur}
-                    placeholder="0.00"
-                    step="0.01"
-                    min="0"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Merchant Code
+                      </label>
+                      <input
+                        type="text"
+                        name="merchantCode"
+                        value={formData.merchantCode}
+                        onChange={handleInputChange}
+                        placeholder="Merchant identifier"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Transaction Reference
-                </label>
-                <input
-                  type="text"
-                  name="transactionRef"
-                  value={formData.transactionRef}
-                  onChange={handleInputChange}
-                  placeholder="Unique transaction ID"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Minimum Amount
+                        </label>
+                        <input
+                          type="number"
+                          name="minimumAmount"
+                          value={formData.minimumAmount}
+                          onChange={handleInputChange}
+                          onBlur={handleAmountBlur}
+                          placeholder="0.00"
+                          step="0.01"
+                          min="0"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Merchant Category Code (MCC)
-                </label>
-                <input
-                  type="text"
-                  name="merchantCategoryCode"
-                  value={formData.merchantCategoryCode}
-                  onChange={handleInputChange}
-                  placeholder="e.g., 5411 for grocery stores"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Maximum Amount
+                        </label>
+                        <input
+                          type="number"
+                          name="maximumAmount"
+                          value={formData.maximumAmount}
+                          onChange={handleInputChange}
+                          onBlur={handleAmountBlur}
+                          placeholder="0.00"
+                          step="0.01"
+                          min="0"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                    </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Merchant City
-                  </label>
-                  <input
-                    type="text"
-                    name="merchantCity"
-                    value={formData.merchantCity}
-                    onChange={handleInputChange}
-                    placeholder="City name"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Transaction Reference
+                      </label>
+                      <input
+                        type="text"
+                        name="transactionRef"
+                        value={formData.transactionRef}
+                        onChange={handleInputChange}
+                        placeholder="Unique transaction ID"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Merchant PIN Code
-                  </label>
-                  <input
-                    type="text"
-                    name="merchantPinCode"
-                    value={formData.merchantPinCode}
-                    onChange={handleInputChange}
-                    placeholder="PIN code"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Merchant Category Code (MCC)
+                      </label>
+                      <input
+                        type="text"
+                        name="merchantCategoryCode"
+                        value={formData.merchantCategoryCode}
+                        onChange={handleInputChange}
+                        placeholder="e.g., 5411 for grocery stores"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Merchant City
+                        </label>
+                        <input
+                          type="text"
+                          name="merchantCity"
+                          value={formData.merchantCity}
+                          onChange={handleInputChange}
+                          placeholder="City name"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Merchant PIN Code
+                        </label>
+                        <input
+                          type="text"
+                          name="merchantPinCode"
+                          value={formData.merchantPinCode}
+                          onChange={handleInputChange}
+                          placeholder="PIN code"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {error && (
@@ -444,15 +505,43 @@ export default function Home() {
                     Download QR Code
                   </button>
 
-                  <button
-                    onClick={shareQRCode}
-                    className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors flex items-center justify-center gap-2"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
-                    </svg>
-                    Share QR Code
-                  </button>
+                  <div className="relative share-menu-container">
+                    <button
+                      onClick={shareQRCode}
+                      className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors flex items-center justify-center gap-2"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
+                      </svg>
+                      Share QR Code
+                    </button>
+
+                                         {/* Share Menu */}
+                     {showShareMenu && (
+                       <div className="absolute bottom-full left-0 right-0 mb-2 bg-white border border-gray-200 rounded-md shadow-lg z-10">
+                         <div className="p-2 space-y-1">
+                           <button
+                             onClick={shareQRImage}
+                             className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md flex items-center gap-2"
+                           >
+                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                             </svg>
+                             Download QR Image
+                           </button>
+                           <button
+                             onClick={shareViaNative}
+                             className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md flex items-center gap-2"
+                           >
+                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
+                             </svg>
+                             Share QR Image (Mobile)
+                           </button>
+                         </div>
+                       </div>
+                     )}
+                  </div>
                 </div>
               </div>
             ) : (
