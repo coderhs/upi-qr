@@ -557,28 +557,40 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Information Section */}
-        <div className="mt-8 bg-white rounded-lg shadow-lg p-6">
-          <h3 className="text-xl font-semibold text-gray-800 mb-4">About UPI QR Codes</h3>
-          <div className="grid md:grid-cols-2 gap-6 text-sm text-gray-600">
-            <div>
-              <h4 className="font-medium text-gray-800 mb-2">Required Fields:</h4>
-              <ul className="space-y-1">
-                <li>• <strong>Payee VPA:</strong> UPI ID of the recipient (e.g., example@upi)</li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-medium text-gray-800 mb-2">Optional Fields:</h4>
-              <ul className="space-y-1">
-                <li>• <strong>Payee Name:</strong> Name of the recipient</li>
-                <li>• <strong>Amount:</strong> Fixed amount for the transaction</li>
-                <li>• <strong>Transaction Note:</strong> Description of the payment</li>
-                <li>• <strong>Merchant Details:</strong> For business transactions</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
+                 {/* Information Section */}
+         <div className="mt-8 bg-white rounded-lg shadow-lg p-6">
+           <h3 className="text-xl font-semibold text-gray-800 mb-4">About UPI QR Codes</h3>
+           <div className="grid md:grid-cols-2 gap-6 text-sm text-gray-600">
+             <div>
+               <h4 className="font-medium text-gray-800 mb-2">Required Fields:</h4>
+               <ul className="space-y-1">
+                 <li>• <strong>Payee VPA:</strong> UPI ID of the recipient (e.g., example@upi)</li>
+               </ul>
+             </div>
+             <div>
+               <h4 className="font-medium text-gray-800 mb-2">Optional Fields:</h4>
+               <ul className="space-y-1">
+                 <li>• <strong>Payee Name:</strong> Name of the recipient</li>
+                 <li>• <strong>Amount:</strong> Fixed amount for the transaction</li>
+                 <li>• <strong>Transaction Note:</strong> Description of the payment</li>
+                 <li>• <strong>Merchant Details:</strong> For business transactions</li>
+               </ul>
+             </div>
+           </div>
+         </div>
+
+         {/* Footer */}
+         <div className="mt-8 text-center">
+           <a
+             href="https://hsps.in"
+             target="_blank"
+             rel="noopener noreferrer"
+             className="text-gray-500 hover:text-gray-700 transition-colors text-sm"
+           >
+             Built by Harisankar PS | hsps.in
+           </a>
+         </div>
+       </div>
+     </div>
+   );
+ }
